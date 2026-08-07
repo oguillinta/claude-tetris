@@ -43,7 +43,8 @@ jobs:
                - A plausible root cause or explanation of the requested behavior.
                - Suggested next steps for implementing the fix or feature.
                Start the comment body with the exact marker `<!-- claude-triage -->` on its own
-               first line.
+               first line. Write the entire comment in GitHub-flavored Markdown (headings, lists,
+               code spans/blocks, etc.) so it renders correctly on GitHub.
             4. Before posting, check whether a comment already starts with `<!-- claude-triage -->`
                using `gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments`.
                If one exists, update it in place with
