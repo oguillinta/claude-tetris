@@ -1,0 +1,52 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh api:*)"'
+          prompt: |
+            Analyze issue #${{ github.event.issue.number }} in ${{ github.repository }} and perform triage.
+
+            Steps:
+            1. Read the issue title and body with `gh issue view ${{ github.event.issue.number }}`.
+            2. List the repository's existing labels with `gh label list`. Choose only from these
+               existing labels to describe the issue (e.g. type such as bug/enhancement/question,
+               and affected area if a matching label exists). Do NOT create new labels. Apply the
+               chosen labels with `gh issue edit ${{ github.event.issue.number }} --add-label "..."`.
+            3. Write a general diagnostic comment that helps prepare the eventual fix. Base it on
+               this repo's architecture (see CLAUDE.md): a vanilla JS Tetris in game.js, index.html,
+               and style.css, with the board model, piece rotation/collision, wall kicks, game loop,
+               line clearing, scoring, and ghost piece as described there. The diagnostic should
+               explain:
+               - What part of the codebase is most likely involved (file/function, referencing
+                 game.js:LINE style locations where useful).
+               - A plausible root cause or explanation of the requested behavior.
+               - Suggested next steps for implementing the fix or feature.
+               Start the comment body with the exact marker `<!-- claude-triage -->` on its own
+               first line.
+            4. Before posting, check whether a comment already starts with `<!-- claude-triage -->`
+               using `gh api repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments`.
+               If one exists, update it in place with
+               `gh api repos/${{ github.repository }}/issues/comments/<id> -X PATCH -f body="..."`
+               instead of creating a new comment. Otherwise post a new comment with
+               `gh issue comment ${{ github.event.issue.number }} --body "..."`.
